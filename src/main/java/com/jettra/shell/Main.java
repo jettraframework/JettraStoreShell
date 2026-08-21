@@ -291,6 +291,46 @@ public class Main {
                         }
                         break;
 
+                    case "ref":
+                        if (client == null || !client.isConnected()) {
+                            System.out.println("Please 'connect' and 'login' first.");
+                            break;
+                        }
+                        if (parts.length < 2) {
+                            System.out.println("Usage:");
+                            System.out.println("  ref resolve <jref_uri>");
+                            System.out.println("  ref create <engine> <database> <id> [node]");
+                            break;
+                        }
+                        String subRef = parts[1].toLowerCase();
+                        if ("resolve".equals(subRef)) {
+                            if (parts.length < 3) {
+                                System.out.println("Usage: ref resolve <jref_uri>");
+                                break;
+                            }
+                            String uri = parts[2];
+                            String resolved = client.resolveRef(uri);
+                            if (resolved != null && !resolved.isBlank()) {
+                                System.out.println("Resolved Reference [" + uri + "]:");
+                                System.out.println(resolved);
+                            } else {
+                                System.out.println("Referenced object not found: " + uri);
+                            }
+                        } else if ("create".equals(subRef)) {
+                            if (parts.length < 5) {
+                                System.out.println("Usage: ref create <engine> <database> <id> [node]");
+                                break;
+                            }
+                            String refEng = parts[2];
+                            String refDb = parts[3];
+                            String refId = parts[4];
+                            String refNode = parts.length > 5 ? parts[5] : null;
+                            var r = com.jettra.driver.java.JettraReference.of(refNode, refEng, refDb, refId);
+                            System.out.println("Generated Reference URI: " + r.toUri());
+                            System.out.println("Direct Storage Key:      " + r.directStorageKey());
+                        }
+                        break;
+
                     case "backup":
                         if (client == null || !client.isConnected()) {
                             System.out.println("Please 'connect' and 'login' first.");
@@ -350,6 +390,8 @@ public class Main {
                         System.out.println("  record history <coll> <id>                       View record version history");
                         System.out.println("  record restore <coll> <id> <timestamp>           Restore record to historical version");
                         System.out.println("  record delete <coll> <id>                        Delete Java 25 Record");
+                        System.out.println("  ref create <engine> <database> <id> [node]       Build fast cross-engine reference pointer");
+                        System.out.println("  ref resolve <jref_uri>                           Direct O(1) resolve of cross-engine link");
                         System.out.println("  backup                                           Trigger manual snapshot backup");
                         System.out.println("  status                                           Display cluster node health & metrics");
                         System.out.println("  users                                            List configured users");

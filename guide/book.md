@@ -366,6 +366,8 @@ Supported Multi-Model Engines (All 9 Engines):
 | `record history` | `<coll> <id>` | View Java 25 Record version history |
 | `record restore` | `<coll> <id> <timestamp>` | Restore Java 25 Record to historical version |
 | `record delete` | `<coll> <id>` | Delete Java 25 Record entity |
+| `ref create` | `<engine> <db> <id> [node]` | Build ultra-fast cross-engine reference pointer |
+| `ref resolve` | `<jref_uri>` | Direct O(1) resolve of cross-engine link |
 | `backup` | *(none)* | Trigger manual snapshot backup |
 | `status` | *(none)* | Display node RAM, Disk, and Quorum health |
 | `users` | *(none)* | List configured users and roles |
