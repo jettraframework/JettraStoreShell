@@ -24,7 +24,7 @@ Password: [admin]
 
 ## 2. Administración de Bases de Datos
 
-El shell permite gestionar las bases de datos lógicas (que soportan de forma nativa los 8 motores de almacenamiento).
+El shell permite gestionar las bases de datos lógicas (que soportan de forma nativa los 9 motores de almacenamiento).
 
 ```bash
 # Crear base de datos persistente
@@ -32,6 +32,19 @@ jettra> db create library_db
 
 # Crear base de datos en memoria
 jettra> db create cache_db --storage MEMORY
+
+# Listar los 9 motores disponibles
+jettra> engines
+Supported Engines (9 Multi-Models):
+  1. DOCUMENT   (NoSQL JSON Documents)
+  2. VECTOR     (AI ANN Cosine Embeddings)
+  3. GRAPH      (LPG Nodes & Relations)
+  4. TIMESERIES (IoT Sensor Telemetry)
+  5. COLUMN     (OLAP Columnar Rows)
+  6. KEYVALUE   (High-Speed Cache)
+  7. GEOSPATIAL (2D GIS Spatial Points)
+  8. OBJECT     (Binary BLOBs & Media)
+  9. RECORDS    (Java 25 Immutable Records)
 
 # Listar bases de datos
 jettra> show dbs
@@ -42,22 +55,31 @@ jettra> use library_db
 
 ---
 
-## 3. Inserciones Multimodelo
+## 3. Inserciones Multimodelo & Motor Records (Java 25)
 
 Puedes insertar datos dinámicamente usando notación tipo JSON especificando el modelo subyacente. Si no se especifica, se asume `DOCUMENT`.
 
 ```bash
 # Motor Documental (Por defecto)
-jettra> db.users.insert({ "_id": "usr_1", "name": "Alice", "role": "admin" })
+jettra> insert document users usr_1 {"name": "Alice", "role": "admin"}
 
-# Motor Vectorial
-jettra> db.ai_docs.vector.insert({ "_id": "vec_1", "vector": [0.2, 0.5, 0.8] })
+# Motor Vectorial (Embeddings AI)
+jettra> insert vector embeddings vec_1 {"vector": [0.2, 0.5, 0.8], "label": "search_query"}
 
 # Motor Clave-Valor
-jettra> db.sessions.kv.insert({ "key": "session_123", "value": "token_xyz" })
+jettra> insert keyvalue sessions session_123 "token_xyz"
 
 # Motor de Grafos
-jettra> db.social.graph.insert({ "_id": "node_alice", "name": "Alice", "age": 30 })
+jettra> insert graph social node_alice {"name": "Alice", "age": 30}
+
+# Motor Records (Java 25 Immutable Records)
+jettra> record insert employees emp_101 com.enterprise.model.EmployeeRecord {"id": "emp_101", "name": "Carlos Mendez", "salary": 92000.0}
+
+# Obtener Record
+jettra> record get employees emp_101
+
+# Eliminar Record
+jettra> record delete employees emp_101
 ```
 
 ---
