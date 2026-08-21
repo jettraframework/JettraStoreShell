@@ -1,6 +1,6 @@
 # JettraStoreShell - The Definitive Guide & Operational Manual
 
-**JettraStoreShell** is the native, high-performance interactive Command-Line Interface (REPL) and administrative shell for **JettraStoreEngine**, engineered in Java 25. It enables database administrators, site reliability engineers, and software architects to interact with all 9 multi-model database engines, inspect Raft consensus cluster nodes, execute ACID transactions, and manage per-database RBAC security realms directly from the terminal.
+**JettraStoreShell** is the native, high-performance interactive Command-Line Interface (REPL) and administrative shell for **JettraStoreEngine**, engineered in Java 25. It enables database administrators, site reliability engineers, and software architects to interact with all 9 multi-model database engines, manage flexible ObjectId/DocumentId generation modes, inspect version histories with diffs, execute point-in-time restorations, and store immutable Java 25 Records directly from the terminal.
 
 ---
 
@@ -10,30 +10,35 @@
   - [1.2 Command Dispatcher & Tokenizer](#12-command-dispatcher--tokenizer)
 - [Chapter 2: Installation, Build & Configuration](#chapter-2-installation-build--configuration)
   - [2.1 Building from Source](#21-building-from-source)
-  - [2.2 Launching and Environment Variables](#22-launching-and-environment-variables)
-- [Chapter 3: Authentication, Session Management & RBAC](#chapter-3-authentication-session-management--rbac)
-  - [3.1 Cluster Node Connection](#31-cluster-node-connection)
-  - [3.2 JWT Token Negotiation](#32-jwt-token-negotiation)
-  - [3.3 Role-Based Permissions](#33-role-based-permissions)
-- [Chapter 4: The 9 Multi-Model Database Engines in the Shell](#chapter-4-the-9-multi-model-database-engines-in-the-shell)
-  - [4.1 Records Engine (Java 25 Records)](#41-records-engine-java-25-records)
-  - [4.2 Document Engine (JSON / NoSQL)](#42-document-engine-json--nosql)
-  - [4.3 Vector Engine (AI Embeddings)](#43-vector-engine-ai-embeddings)
-  - [4.4 Graph Engine (Nodes & Relations)](#44-graph-engine-nodes--relations)
-  - [4.5 TimeSeries Engine (Metrics & Telemetry)](#45-timeseries-engine-metrics--telemetry)
-  - [4.6 Columnar Engine (OLAP Tables)](#46-columnar-engine-olap-tables)
-  - [4.7 KeyValue Engine (Memory Cache)](#47-keyvalue-engine-memory-cache)
-  - [4.8 Geospatial Engine (2D GIS Spatial Points)](#48-geospatial-engine-2d-gis-spatial-points)
-  - [4.9 Object Engine (Binary BLOBs & Media)](#49-object-engine-binary-blobs--media)
-- [Chapter 5: Dedicated Records Engine Command Suite](#chapter-5-dedicated-records-engine-command-suite)
-  - [5.1 `record insert`](#51-record-insert)
-  - [5.2 `record get`](#52-record-get)
-  - [5.3 `record delete`](#53-record-delete)
-- [Chapter 6: Cluster Administration, Backups & Monitoring](#chapter-6-cluster-administration-backups--monitoring)
-  - [6.1 Node Health & Status](#61-node-health--status)
-  - [6.2 Snapshot Backups](#62-snapshot-backups)
-  - [6.3 User Management](#63-user-management)
-- [Chapter 7: Interactive Scripting & Batch Execution](#chapter-7-interactive-scripting--batch-execution)
+  - [2.2 Launching and Command Flags](#22-launching-and-command-flags)
+- [Chapter 3: Authentication & Session Management](#chapter-3-authentication--session-management)
+  - [3.1 Node Connection (`connect`)](#31-node-connection-connect)
+  - [3.2 JWT Authentication (`login`)](#32-jwt-authentication-login)
+- [Chapter 4: ObjectId / DocumentId Generation Modes](#chapter-4-objectid--documentid-generation-modes)
+  - [4.1 Manual Mode](#41-manual-mode)
+  - [4.2 Auto-increment Sequence Mode (`auto`)](#42-auto-increment-sequence-mode-auto)
+  - [4.3 Composite UUID Mode (`uuid`)](#43-composite-uuid-mode-uuid)
+- [Chapter 5: Multi-Model Operations: CRUD & Edition](#chapter-5-multi-model-operations-crud--edition)
+  - [5.1 `insert` - Multi-Model Ingestion](#51-insert---multi-model-ingestion)
+  - [5.2 `edit` - Record & Document Updating](#52-edit---record--document-updating)
+  - [5.3 `get` - Key/Object Lookup](#53-get---keyobject-lookup)
+  - [5.4 `delete` / `rm` - Deletion](#54-delete--rm---deletion)
+- [Chapter 6: Version History, Diffs & Point-in-Time Restoration](#chapter-6-version-history-diffs--point-in-time-restoration)
+  - [6.1 `history` - Inspecting Historical Versions](#61-history---inspecting-historical-versions)
+  - [6.2 `restore` - Point-in-Time Rollback](#62-restore---point-in-time-rollback)
+- [Chapter 7: Dedicated Records Engine Command Suite (Java 25 Records)](#chapter-7-dedicated-records-engine-command-suite-java-25-records)
+  - [7.1 `record insert`](#71-record-insert)
+  - [7.2 `record edit`](#72-record-edit)
+  - [7.3 `record get`](#73-record-get)
+  - [7.4 `record history`](#74-record-history)
+  - [7.5 `record restore`](#75-record-restore)
+  - [7.6 `record delete`](#76-record-delete)
+- [Chapter 8: Cluster Administration & Maintenance](#chapter-8-cluster-administration--maintenance)
+  - [8.1 `status` - Node Health & Telemetry](#81-status---node-health--telemetry)
+  - [8.2 `backup` - Snapshot Backups](#82-backup---snapshot-backups)
+  - [8.3 `engines` - Multi-Model Catalog](#83-engines---multi-model-catalog)
+  - [8.4 `users` & `rules`](#84-users--rules)
+- [Chapter 9: Complete Command Reference Table](#chapter-9-complete-command-reference-table)
 
 ---
 
@@ -49,9 +54,10 @@
                    ▼                           │
        ┌──────────────────────────────────────────────┐
        │             JettraStoreShell (REPL)          │
-       │  - Command Parser & Syntax Validator         │
-       │  - JWT Session & Token Storage               │
-       │  - JettraStoreDriverJava Client Core         │
+       │  - Command Parser & Tokenizer                │
+       │  - JWT Bearer Session Cache                  │
+       │  - IdMode Resolution Engine                  │
+       │  - JettraStoreDriverJava Core Engine         │
        └──────────────────────────────────────────────┘
                                │
                HTTP / REST API (Port 8086)
@@ -61,216 +67,253 @@
        │             JettraStoreEngine Node           │
        │  - 9 Multi-Model Database Engines            │
        │  - LSM-Tree / B-Tree Hybrid Storage Core     │
+       │  - Composite IdGenerator & Version Control   │
        │  - Raft Quorum Distributed Consensus         │
        └──────────────────────────────────────────────┘
 ```
 
 ### 1.1 Non-blocking Connection Architecture
-`JettraStoreShell` utilizes the shaded `JettraStoreDriverJava` HTTP client, running on Java 25 Virtual Threads. It connects to the cluster REST port (default `8086`), authenticates using HMAC-SHA256 tokens (`JettraJWT`), and maintains session credentials transparently across command invocations.
+`JettraStoreShell` communicates with `JettraStoreEngine` over HTTP REST (default port `8086`) and gRPC. It leverages Java 25 Virtual Threads for immediate, non-blocking execution of queries, document writes, version scanning, and snapshot backups.
 
 ### 1.2 Command Dispatcher & Tokenizer
-The shell loop parses commands using delimiter-aware tokenization:
-- Command token matching (`insert`, `get`, `delete`, `record`, `engines`, `status`, `backup`, `users`, `rules`, `help`, `exit`).
-- Model type validation (`RECORDS`, `DOCUMENT`, `VECTOR`, `GRAPH`, `TIMESERIES`, `COLUMN`, `KEYVALUE`, `GEOSPATIAL`, `OBJECT`).
-- JSON payload parsing with escape sequence sanitization.
+The REPL loop tokenizes input streams with support for:
+- Command token matching (`insert`, `edit`, `get`, `delete`, `history`, `restore`, `record`, `engines`, `status`, `backup`, `help`, `exit`).
+- Auto ID resolution (`auto`, `uuid`, or custom ID).
+- Nested JSON payloads with escape preservation.
 
 ---
 
 # Chapter 2: Installation, Build & Configuration
 
 ### 2.1 Building from Source
-`JettraStoreShell` is built with Apache Maven:
+`JettraStoreShell` uses Apache Maven:
 
 ```bash
 cd JettraStoreShell
 mvn clean package -DskipTests
 ```
 
-The build produces a single standalone executable uber-JAR in `target/JettraStoreShell-1.0-SNAPSHOT.jar`.
+The build generates an executable shaded JAR in `target/JettraStoreShell-1.0-SNAPSHOT.jar`.
 
-### 2.2 Launching and Environment Variables
+### 2.2 Launching and Command Flags
 ```bash
 java --enable-preview -jar target/JettraStoreShell-1.0-SNAPSHOT.jar
 ```
 
-Optional environment variables:
-- `JETTRA_HOST`: Default node host (e.g. `127.0.0.1`).
-- `JETTRA_PORT`: Default REST port (e.g. `8086`).
-
 ---
 
-# Chapter 3: Authentication, Session Management & RBAC
+# Chapter 3: Authentication & Session Management
 
-### 3.1 Cluster Node Connection
-Establish an HTTP channel to a running JettraStoreEngine instance:
+### 3.1 Node Connection (`connect`)
 ```text
 jettra> connect localhost 8086
-Connected to JettraStoreEngine at localhost:8086
+Connecting to JettraStoreEngine at localhost:8086...
+Connected successfully.
 ```
 
-### 3.2 JWT Token Negotiation
-Authenticate your user credentials:
+### 3.2 JWT Authentication (`login`)
 ```text
 jettra> login admin admin
 Login successful.
 ```
 
-Upon successful authentication, the shell stores the JWT bearer token in memory and attaches it automatically to the `Authorization: Bearer <token>` header of all subsequent database requests.
-
-### 3.3 Role-Based Permissions
-Privileges are enforced on a per-database basis:
-- **`DB_ADMIN`**: Full DDL/DML on assigned database scope.
-- **`READ_WRITE`**: Insert, update, and query entities.
-- **`READ_ONLY`**: Search and get operations only.
-- **`MANAGER`**: Trigger backups, restore points, and node health checks.
+The shell stores the JWT bearer token in memory and automatically attaches it to all subsequent requests.
 
 ---
 
-# Chapter 4: The 9 Multi-Model Database Engines in the Shell
+# Chapter 4: ObjectId / DocumentId Generation Modes
 
-`JettraStoreShell` provides access to all 9 multi-model database engines:
+`JettraStoreShell` supports 3 ID generation strategies when inserting objects:
 
+### 4.1 Manual Mode
+Pass a custom string as the third parameter:
 ```text
-jettra> engines
-Supported Engines (9 Multi-Models):
-  1. DOCUMENT   (NoSQL JSON Documents)
-  2. VECTOR     (AI ANN Cosine Embeddings)
-  3. GRAPH      (LPG Nodes & Relations)
-  4. TIMESERIES (IoT Sensor Telemetry)
-  5. COLUMN     (OLAP Columnar Rows)
-  6. KEYVALUE   (High-Speed Cache)
-  7. GEOSPATIAL (2D GIS Spatial Points)
-  8. OBJECT     (Binary BLOBs & Media)
-  9. RECORDS    (Java 25 Immutable Records)
+jettra> insert document customers cust_1001 {"name":"Carlos Mendez","tier":"GOLD"}
+Object inserted into DOCUMENT [customers:cust_1001].
 ```
 
-### 4.1 Records Engine (Java 25 Records)
-Direct storage of typed records with schema reflection:
+### 4.2 Auto-increment Sequence Mode (`auto`)
+Pass `auto` as the ID parameter to let the database generate an atomic sequence (`1, 2, 3...`):
 ```text
-jettra> record insert employees emp_901 com.enterprise.model.EmployeeRecord {"id":"emp_901","fullName":"Carlos Mendez","salary":95000.0}
+jettra> insert document invoices auto {"customer":"Acme Corp","total":1540.00}
+Object inserted into DOCUMENT [invoices] with Auto-increment ID: 1
+
+jettra> insert document invoices auto {"customer":"Beta LLC","total":3200.50}
+Object inserted into DOCUMENT [invoices] with Auto-increment ID: 2
 ```
 
-### 4.2 Document Engine (JSON / NoSQL)
-Hierarchical NoSQL JSON documents:
+### 4.3 Composite UUID Mode (`uuid`)
+Pass `uuid` as the ID parameter to generate a globally unique composite identifier:
 ```text
-jettra> insert document invoices inv_1001 {"customer":"Acme Corp","total":1540.50,"status":"PAID"}
-jettra> get document invoices inv_1001
+jettra> insert document events uuid {"event":"app_start","status":"OK"}
+Object inserted into DOCUMENT [events] with Composite UUID: 8a7f1c2d-18dc93a4-a1b2-9f82ab34
 ```
-
-### 4.3 Vector Engine (AI Embeddings)
-AI embeddings with cosine distance search:
-```text
-jettra> insert vector product_embeddings sku_881 {"vector":[0.14, 0.88, 0.32, 0.55],"label":"running_shoes"}
-jettra> get vector product_embeddings sku_881
-```
-
-### 4.4 Graph Engine (Nodes & Relations)
-LPG nodes and edges for knowledge graphs:
-```text
-jettra> insert graph knowledge_graph node_carlos {"name":"Carlos Mendez","department":"Engineering"}
-jettra> get graph knowledge_graph node_carlos
-```
-
-### 4.5 TimeSeries Engine (Metrics & Telemetry)
-IoT temporal metric points:
-```text
-jettra> insert timeseries server_telemetry 1755735000000 {"cpu_load":42.5,"mem_mb":1840}
-jettra> get timeseries server_telemetry 1755735000000
-```
-
-### 4.6 Columnar Engine (OLAP Tables)
-Wide-column tabular projections:
-```text
-jettra> insert column sales_olap row_2026_q1 {"revenue":450000,"units":1200,"region":"LATAM"}
-jettra> get column sales_olap row_2026_q1
-```
-
-### 4.7 KeyValue Engine (Memory Cache)
-Ultra-low latency in-memory string values:
-```text
-jettra> insert keyvalue session_tokens sess_9901 "token_jwt_xyz_881"
-jettra> get keyvalue session_tokens sess_9901
-```
-
-### 4.8 Geospatial Engine (2D GIS Spatial Points)
-2D coordinates and GPS points:
-```text
-jettra> insert geospatial store_locations loc_panama {"name":"Panama Flagship","lat":8.9824,"lon":-79.5199}
-jettra> get geospatial store_locations loc_panama
-```
-
-### 4.9 Object Engine (Binary BLOBs & Media)
-Chunked binary BLOBs and Base64 payloads:
-```text
-jettra> insert object media_bucket invoice_pdf {"contentType":"application/pdf","size":4096,"base64":"JVBERi0xLjQK..."}
-jettra> get object media_bucket invoice_pdf
-```
+*Composite UUID Format*: `[CPU/Host Digest]-[Timestamp Hex]-[Namespace Hash]-[Crypto UUID Suffix]`
 
 ---
 
-# Chapter 5: Dedicated Records Engine Command Suite
+# Chapter 5: Multi-Model Operations: CRUD & Edition
 
-`JettraStoreShell` includes first-class subcommands designed specifically for the **`RECORDS`** engine.
-
-### 5.1 `record insert`
+### 5.1 `insert` - Multi-Model Ingestion
 **Syntax:**
 ```text
-record insert <collection> <id> <recordClass> <json_components>
+insert <model> <collection> <id|auto|uuid> <json_document>
+```
+
+**Examples across Multi-Model Engines:**
+```text
+# 1. Document (NoSQL JSON)
+jettra> insert document products prod_01 {"title":"Ergonomic Chair","price":299.99}
+
+# 2. Vector (AI Embeddings)
+jettra> insert vector catalog vec_01 {"vector":[0.12, 0.85, 0.45],"label":"office_furniture"}
+
+# 3. KeyValue (Memory Cache)
+jettra> insert keyvalue session_cache token_xyz "user_admin_session_active"
+
+# 4. Graph (LPG Nodes)
+jettra> insert graph social node_carlos {"name":"Carlos","role":"Architect"}
+
+# 5. TimeSeries (IoT Telemetry)
+jettra> insert timeseries sensors 1755735000000 {"temperature":22.4,"humidity":65.0}
+
+# 6. Column (OLAP Rows)
+jettra> insert column analytics row_q3 {"revenue":150000,"growth":12.5}
+
+# 7. Geospatial (2D GIS Points)
+jettra> insert geospatial branches branch_pty {"lat":8.9824,"lon":-79.5199,"city":"Panama"}
+
+# 8. Object (Binary BLOBs)
+jettra> insert object media doc_pdf {"mime":"application/pdf","sizeBytes":1048576}
+```
+
+### 5.2 `edit` - Record & Document Updating
+Updates an existing document while preserving previous versions in the historical LSM-Tree:
+```text
+jettra> edit document products prod_01 {"title":"Ergonomic Chair Pro","price":349.99,"inStock":true}
+Object 'prod_01' in DOCUMENT [products] updated successfully (new version created).
+```
+
+### 5.3 `get` - Key/Object Lookup
+```text
+jettra> get document products prod_01
+{"title":"Ergonomic Chair Pro","price":349.99,"inStock":true}
+```
+
+### 5.4 `delete` / `rm` - Deletion
+```text
+jettra> delete document products prod_01
+Object 'prod_01' deleted from DOCUMENT [products].
+```
+
+---
+
+# Chapter 6: Version History, Diffs & Point-in-Time Restoration
+
+`JettraStoreEngine` tracks every change with full version timestamps. `JettraStoreShell` allows developers to inspect history and roll back instantly.
+
+### 6.1 `history` - Inspecting Historical Versions
+**Syntax:**
+```text
+history <model> <collection> <id>
 ```
 
 **Example:**
 ```text
-jettra> record insert employees emp_101 com.enterprise.model.EmployeeRecord {"id":"emp_101","fullName":"Carlos Mendez","department":"Engineering","salary":95000.0,"active":true}
-Java Record stored in RECORDS engine [employees:emp_101].
+jettra> history document products prod_01
+Version History for [DOCUMENT:products:prod_01]:
+[
+  {
+    "versionNumber": 2,
+    "timestamp": 1755735820000,
+    "formattedDate": "2026-08-21 11:15:20",
+    "payload": "{\"title\":\"Ergonomic Chair Pro\",\"price\":349.99,\"inStock\":true}",
+    "isCurrent": true
+  },
+  {
+    "versionNumber": 1,
+    "timestamp": 1755735700000,
+    "formattedDate": "2026-08-21 11:13:20",
+    "payload": "{\"title\":\"Ergonomic Chair\",\"price\":299.99}",
+    "isCurrent": false
+  }
+]
 ```
 
-### 5.2 `record get`
+### 6.2 `restore` - Point-in-Time Rollback
 **Syntax:**
 ```text
-record get <collection> <id>
+restore <model> <collection> <id> <timestamp>
 ```
 
 **Example:**
+```text
+jettra> restore document products prod_01 1755735700000
+Object 'prod_01' in DOCUMENT [products] restored to timestamp: 1755735700000
+
+jettra> get document products prod_01
+{"title":"Ergonomic Chair","price":299.99}
+```
+
+---
+
+# Chapter 7: Dedicated Records Engine Command Suite (Java 25 Records)
+
+The **`RECORDS`** engine provides typed storage for immutable Java 25 Records with automatic schema extraction.
+
+### 7.1 `record insert`
+```text
+jettra> record insert employees emp_101 com.enterprise.model.EmployeeRecord {"id":"emp_101","fullName":"Carlos Mendez","department":"Engineering","salary":95000.0}
+Java Record persisted in RECORDS engine [employees:emp_101] (com.enterprise.model.EmployeeRecord).
+```
+
+### 7.2 `record edit`
+```text
+jettra> record edit employees emp_101 com.enterprise.model.EmployeeRecord {"id":"emp_101","fullName":"Carlos Mendez","department":"Engineering","salary":105000.0}
+Java Record persisted in RECORDS engine [employees:emp_101] (com.enterprise.model.EmployeeRecord).
+```
+
+### 7.3 `record get`
 ```text
 jettra> record get employees emp_101
 {
   "_recordClass": "com.enterprise.model.EmployeeRecord",
-  "_timestamp": 1755735492000,
-  "_version": 1,
-  "_schema": {
-    "id": "String",
-    "fullName": "String",
-    "department": "String",
-    "salary": "Double",
-    "active": "Boolean"
-  },
   "components": {
     "id": "emp_101",
     "fullName": "Carlos Mendez",
     "department": "Engineering",
-    "salary": 95000.0,
-    "active": true
+    "salary": 105000.0
   }
 }
 ```
 
-### 5.3 `record delete`
-**Syntax:**
+### 7.4 `record history`
 ```text
-record delete <collection> <id>
+jettra> record history employees emp_101
+Record Version History [employees:emp_101]:
+[
+  { "versionNumber": 2, "timestamp": 1755736200000, "isCurrent": true, "payload": "..." },
+  { "versionNumber": 1, "timestamp": 1755736100000, "isCurrent": false, "payload": "..." }
+]
 ```
 
-**Example:**
+### 7.5 `record restore`
+```text
+jettra> record restore employees emp_101 1755736100000
+Record restored to version from timestamp: 1755736100000
+```
+
+### 7.6 `record delete`
 ```text
 jettra> record delete employees emp_101
-Record deleted successfully.
+Record 'emp_101' deleted successfully from [employees].
 ```
 
 ---
 
-# Chapter 6: Cluster Administration, Backups & Monitoring
+# Chapter 8: Cluster Administration & Maintenance
 
-### 6.1 Node Health & Status
+### 8.1 `status` - Node Health & Telemetry
 ```text
 jettra> status
 {
@@ -281,32 +324,51 @@ jettra> status
 }
 ```
 
-### 6.2 Snapshot Backups
-Creates a point-in-time ZIP snapshot of all `.wal`, `.sst`, `.jettra`, and metadata files:
+### 8.2 `backup` - Snapshot Backups
 ```text
 jettra> backup
-Backup triggered successfully.
+Backup snapshot triggered successfully.
 ```
 
-### 6.3 User Management
+### 8.3 `engines` - Multi-Model Catalog
 ```text
-jettra> users
-User list: [admin, guest]. Active nodes: 1 (Master).
+jettra> engines
+Supported Multi-Model Engines (All 9 Engines):
+  1. DOCUMENT   (Hierarchical JSON / NoSQL Documents with ID Strategies & History)
+  2. RECORDS    (Immutable Java 25 Records with Schema Validation & Diffs)
+  3. KEYVALUE   (High-Speed Cache & MemTable String Store)
+  4. VECTOR     (AI ANN Cosine Embeddings & Vector Index)
+  5. GRAPH      (LPG Nodes, Edges & Graph Traversal)
+  6. TIMESERIES (IoT Sensor Telemetry & Metric WAL)
+  7. COLUMN     (OLAP Columnar Vectors & Run-Length Rows)
+  8. GEOSPATIAL (2D GIS Spatial Points & Distance Calculations)
+  9. OBJECT     (Binary BLOBs, Chunked Block Store & Media)
 ```
 
 ---
 
-# Chapter 7: Interactive Scripting & Batch Execution
+# Chapter 9: Complete Command Reference Table
 
-You can pipe commands into `JettraStoreShell` from bash scripts:
-
-```bash
-cat << 'EOF' | java -jar target/JettraStoreShell-1.0-SNAPSHOT.jar
-connect localhost 8086
-login admin admin
-record insert audit_logs tx_1 com.enterprise.model.AuditRecord {"txId":"tx_1","action":"LOGIN","userId":"admin"}
-record get audit_logs tx_1
-backup
-exit
-EOF
-```
+| Command | Arguments | Description |
+|---|---|---|
+| `connect` | `<host> <port>` | Connect to JettraStoreEngine instance |
+| `login` | `<username> <password>` | Authenticate and obtain JWT token |
+| `engines` | *(none)* | Display all 9 multi-model database engines |
+| `insert` | `<model> <coll> <id\|auto\|uuid> <json>` | Insert object with Manual, Auto-increment, or UUID mode |
+| `edit` | `<model> <coll> <id> <new_json>` | Update document/object and create new version |
+| `get` | `<model> <coll> <id>` | Retrieve document/object by ID |
+| `delete` / `rm` | `<model> <coll> <id>` | Delete document/object by ID |
+| `history` | `<model> <coll> <id>` | Inspect full historical versions and diffs |
+| `restore` | `<model> <coll> <id> <timestamp>` | Roll back document/object to historical timestamp |
+| `record insert` | `<coll> <id\|auto\|uuid> <class> <json>` | Store Java 25 Record entity |
+| `record edit` | `<coll> <id> <class> <new_json>` | Update Java 25 Record entity |
+| `record get` | `<coll> <id>` | Retrieve Java 25 Record entity |
+| `record history` | `<coll> <id>` | View Java 25 Record version history |
+| `record restore` | `<coll> <id> <timestamp>` | Restore Java 25 Record to historical version |
+| `record delete` | `<coll> <id>` | Delete Java 25 Record entity |
+| `backup` | *(none)* | Trigger manual snapshot backup |
+| `status` | *(none)* | Display node RAM, Disk, and Quorum health |
+| `users` | *(none)* | List configured users and roles |
+| `rules` | *(none)* | Inspect active JettraRules constraints |
+| `help` | *(none)* | Show command manual and examples |
+| `exit` / `quit` | *(none)* | Close active shell session |
